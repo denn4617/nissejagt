@@ -55,7 +55,7 @@
     .stage{font-size:16px;line-height:1.55;color:rgba(255,255,255,.90);white-space:pre-wrap}
     .hr{height:1px;background:var(--line);margin:14px 0}
     .input-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
-    input[type="text"],input[type="email"],input[type="password"]{
+    input[type="text"]{
       flex:1 1 240px;min-width:220px;border-radius:14px;border:1px solid var(--line);
       background:rgba(0,0,0,.25);color:var(--text);padding:12px 12px;font-size:15px;outline:none;
       transition:border-color .16s ease, background .16s ease;font-family:var(--mono);
@@ -81,10 +81,6 @@
     .tag.locked{color:rgba(255,255,255,.6)}
     .small{font-size:12px;color:rgba(255,255,255,.62);line-height:1.35}
     .footer{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;color:rgba(255,255,255,.55);font-size:12px}
-    .kbd{
-      font-family:var(--mono);border:1px solid var(--line);border-bottom-color:rgba(255,255,255,.22);
-      background:rgba(255,255,255,.05);padding:2px 7px;border-radius:9px;
-    }
 
     /* Hat minigame overlay */
     .game-wrap{
@@ -144,14 +140,14 @@
           <div class="msg" id="msg"></div>
         </div>
 
-        <div id="emailArea" class="hidden">
+        <div id="downloadArea" class="hidden">
           <div class="input-row">
-            <input id="emailInput" type="email" autocomplete="email" placeholder="Skriv din email for at modtage gavekortet…" />
-            <button id="btnSendEmail">Send gavekort</button>
+            <button id="btnDownload" class="btn">⬇️ Download gavekort</button>
+            <a id="openLink" class="btn ghost" href="/giftcard.pdf" target="_blank" rel="noopener">📄 Åbn gavekort</a>
           </div>
-          <div class="msg" id="emailMsg"></div>
+          <div class="msg" id="downloadMsg"></div>
           <div class="small" style="margin-top:8px;">
-            (Der sendes en mail med gavekortet som vedhæftet fil.)
+            Tip: På iPhone åbner PDF ofte i en ny fane – brug “Del” → “Gem i Filer”.
           </div>
         </div>
 
@@ -265,12 +261,11 @@ Jeg har en vask – og under den gemmer sig ting...
 
 Hvad er rummet?`,
           answer: "BADEVÆRELSE",
-          // når hun svarer rigtigt, går vi videre til næste step; derfor lægger vi instruktionen her:
           hint: "Det starter med B…"
         },
         {
           id: "final_unlock",
-          type: "emailUnlock",
+          type: "downloadUnlock",
           name: "Gavekort",
           where: "Præmie",
           code: "SMILLZ",
@@ -283,13 +278,13 @@ Der ligger:
 - Smirnoff Ice 🍻
 - og en KODE
 
-Skriv koden her for at låse email-feltet op.`,
-  unlockedText:
+Skriv koden her for at låse download op.`,
+          unlockedText:
 `YES! ✅
 
-Indtast din email adresse for at modtage din sidste gave 🎁`,
-  hint: "Koden står på sedlen ved isen."
-}
+Klik på knappen for at downloade din sidste gave 🎁`,
+          hint: "Koden står på sedlen ved isen."
+        }
       ],
       end: {
         title: "Du klarede den! 🎉",
@@ -304,13 +299,13 @@ Glædelig jul!`
     };
 
     const $ = (s) => document.querySelector(s);
-    const storageKey = "nissejagt_progress_v3";
+    const storageKey = "nissejagt_progress_v4";
     const norm = (s) => (s || "").toString().trim().toLowerCase().replace(/\s+/g, "");
 
     function loadState(){
       try{
         const raw = localStorage.getItem(storageKey);
-        if(!raw) return { idx:-1, done:false, revealedHint:false, gameUnlocked:false, hatsCaught:0, emailUnlocked:false };
+        if(!raw) return { idx:-1, done:false, revealedHint:false, gameUnlocked:false, hatsCaught:0, downloadUnlocked:false };
         const st = JSON.parse(raw);
         return {
           idx: typeof st.idx === "number" ? st.idx : -1,
@@ -318,10 +313,10 @@ Glædelig jul!`
           revealedHint: !!st.revealedHint,
           gameUnlocked: !!st.gameUnlocked,
           hatsCaught: typeof st.hatsCaught === "number" ? st.hatsCaught : 0,
-          emailUnlocked: !!st.emailUnlocked
+          downloadUnlocked: !!st.downloadUnlocked
         };
       } catch {
-        return { idx:-1, done:false, revealedHint:false, gameUnlocked:false, hatsCaught:0, emailUnlocked:false };
+        return { idx:-1, done:false, revealedHint:false, gameUnlocked:false, hatsCaught:0, downloadUnlocked:false };
       }
     }
     function saveState(st){ localStorage.setItem(storageKey, JSON.stringify(st)); }
@@ -335,11 +330,6 @@ Glædelig jul!`
 
     function setMsg(text, kind){
       const el = $("#msg");
-      el.textContent = text;
-      el.className = "msg " + (kind || "");
-    }
-    function setEmailMsg(text, kind){
-      const el = $("#emailMsg");
       el.textContent = text;
       el.className = "msg " + (kind || "");
     }
@@ -360,8 +350,14 @@ Glædelig jul!`
       let title="", text="", hint="";
 
       $("#gameContainer").classList.add("hidden");
-      $("#emailArea").classList.add("hidden");
+      $("#downloadArea").classList.add("hidden");
       $("#codeArea").classList.remove("hidden");
+
+      // clear messages
+      $("#msg").textContent = "";
+      $("#msg").className = "msg";
+      $("#downloadMsg").textContent = "";
+      $("#downloadMsg").className = "msg";
 
       if(stage.kind === "intro"){
         title = HUNT.intro.title;
@@ -396,21 +392,18 @@ Glædelig jul!`
           $("#codeInput").disabled = false;
           $("#btnSubmit").disabled = false;
           $("#codeInput").placeholder = "Skriv svaret her…";
-        } else if(stage.step.type === "emailUnlock"){
-  $("#codeInput").disabled = false;
-  $("#btnSubmit").disabled = false;
+        } else if(stage.step.type === "downloadUnlock"){
+          $("#codeInput").disabled = false;
+          $("#btnSubmit").disabled = false;
 
-  if(st.emailUnlocked){
-    // VIGTIGT: sæt variablen 'text' (så den ikke overskrives senere)
-    text = stage.step.unlockedText || "Indtast din email adresse for at modtage din sidste gave 🎁";
-
-    $("#codeArea").classList.add("hidden");
-    $("#emailArea").classList.remove("hidden");
-  } else {
-    $("#codeInput").placeholder = "Skriv koden fra sedlen under vasken…";
-  }
-}
-else {
+          if(st.downloadUnlocked){
+            text = stage.step.unlockedText || "Klik på download for at få din sidste gave 🎁";
+            $("#codeArea").classList.add("hidden");
+            $("#downloadArea").classList.remove("hidden");
+          } else {
+            $("#codeInput").placeholder = "Skriv koden fra sedlen under vasken…";
+          }
+        } else {
           $("#codeInput").disabled = false;
           $("#btnSubmit").disabled = false;
           $("#codeInput").placeholder = "Skriv koden fra sedlen…";
@@ -423,11 +416,6 @@ else {
       const showHint = st.revealedHint && hint;
       $("#hintBox").style.display = showHint ? "block" : "none";
       $("#hintBox").textContent = showHint ? `Ekstra hint: ${hint}` : "";
-
-      $("#msg").textContent = "";
-      $("#msg").className = "msg";
-      $("#emailMsg").textContent = "";
-      $("#emailMsg").className = "msg";
 
       // route list
       const list = $("#routeList");
@@ -445,9 +433,7 @@ else {
 
         const ds = document.createElement("div");
         ds.className = "desc";
-        ds.textContent =
-          (s.type === "emailUnlock") ? "Følg instruktionen på siden" :
-          "Følg instruktionen på siden";
+        ds.textContent = "Følg instruktionen på siden";
 
         left.appendChild(nm);
         left.appendChild(ds);
@@ -464,7 +450,6 @@ else {
       });
 
       $("#codeInput").value = "";
-      $("#emailInput").value = "";
 
       if(stage.kind === "step" && stage.step.type === "game"){
         initHatGame();
@@ -484,7 +469,7 @@ else {
           st.revealedHint = false;
           st.gameUnlocked = false;
           st.hatsCaught = 0;
-          st.emailUnlocked = false;
+          st.downloadUnlocked = false;
           saveState(st);
           setMsg("Nice 😄 Niveau 1 er klar!", "ok");
           setTimeout(render, 250);
@@ -506,11 +491,11 @@ else {
         const expectedAnswer = norm(step.answer || "");
         if(input && expectedAnswer && input === expectedAnswer){
           setMsg("Korrekt ✅ Gå til badeværelset!", "ok");
-          st.idx += 1;               // videre til emailUnlock
+          st.idx += 1; // videre til downloadUnlock
           st.revealedHint = false;
           st.gameUnlocked = false;
           st.hatsCaught = 0;
-          st.emailUnlocked = false;
+          st.downloadUnlocked = false;
           saveState(st);
           setTimeout(render, 280);
         } else {
@@ -519,12 +504,12 @@ else {
         return;
       }
 
-      if(step.type === "emailUnlock"){
+      if(step.type === "downloadUnlock"){
         const expectedCode = norm(step.code || "");
         if(input && expectedCode && input === expectedCode){
-          st.emailUnlocked = true;
+          st.downloadUnlocked = true;
           saveState(st);
-          setMsg("Korrekt ✅ Email-feltet er nu låst op.", "ok");
+          setMsg("Korrekt ✅ Download er nu låst op.", "ok");
           setTimeout(render, 200);
         } else {
           setMsg("Forkert kode – kig på sedlen under vasken 😉", "bad");
@@ -538,7 +523,8 @@ else {
         st.revealedHint = false;
         st.gameUnlocked = false;
         st.hatsCaught = 0;
-        st.emailUnlocked = false;
+        st.downloadUnlocked = false;
+        if(st.idx >= HUNT.steps.length){ st.done = true; }
         saveState(st);
         setMsg("Korrekt ✅ Næste niveau!", "ok");
         setTimeout(render, 280);
@@ -554,15 +540,6 @@ else {
       render();
     }
 
-    async function copyLink(){
-      try{
-        await navigator.clipboard.writeText(location.href);
-        setMsg("Link kopieret ✅", "ok");
-      } catch {
-        setMsg("Kunne ikke kopiere automatisk. Kopiér URL’en i adresselinjen.", "bad");
-      }
-    }
-
     function resetFlow(){
       const pin = prompt("Admin pin for reset:");
       if(pin === null) return;
@@ -573,6 +550,56 @@ else {
       localStorage.removeItem(storageKey);
       setMsg("Reset gennemført. Starter forfra.", "ok");
       setTimeout(render, 250);
+    }
+
+    async function downloadGiftcard(){
+      const st = loadState();
+      const stage = stageFromState(st);
+
+      if(stage.kind !== "step" || stage.step.type !== "downloadUnlock" || !st.downloadUnlocked){
+        $("#downloadMsg").textContent = "Du skal låse op først 🙂";
+        $("#downloadMsg").className = "msg bad";
+        return;
+      }
+
+      const url = "/giftcard.pdf";
+
+      $("#btnDownload").disabled = true;
+      $("#downloadMsg").textContent = "Henter…";
+      $("#downloadMsg").className = "msg";
+
+      try{
+        const res = await fetch(url, { cache: "no-store" });
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = "gavekort.pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        URL.revokeObjectURL(blobUrl);
+
+        $("#downloadMsg").textContent = "Done ✅";
+        $("#downloadMsg").className = "msg ok";
+
+        // Markér som færdig (valgfrit)
+        st.done = true;
+        saveState(st);
+        setTimeout(render, 250);
+
+      } catch(e){
+        // iOS fallback: åbn i ny fane
+        window.open(url, "_blank", "noopener");
+        $("#downloadMsg").textContent = "Åbnede gavekortet i en ny fane 📄";
+        $("#downloadMsg").className = "msg ok";
+      } finally {
+        $("#btnDownload").disabled = false;
+      }
     }
 
     // ===== Hat game =====
@@ -693,53 +720,6 @@ else {
       game.raf = requestAnimationFrame(tick);
     }
 
-    // ===== Email send =====
-    function validEmail(s){
-      const v = (s || "").trim();
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-    }
-
-    async function sendGiftcard(){
-      const st = loadState();
-      const stage = stageFromState(st);
-      if(stage.kind !== "step" || stage.step.type !== "emailUnlock") return;
-      if(!st.emailUnlocked) return;
-
-      const email = ($("#emailInput").value || "").trim();
-      if(!validEmail(email)){
-        setEmailMsg("Skriv en gyldig emailadresse.", "bad");
-        return;
-      }
-
-      $("#btnSendEmail").disabled = true;
-      setEmailMsg("Sender…", "");
-
-      try{
-        const res = await fetch("/.netlify/functions/send-giftcard", {
-          method: "POST",
-          headers: { "Content-Type":"application/json" },
-          body: JSON.stringify({ email })
-        });
-
-        const data = await res.json().catch(() => ({}));
-        if(!res.ok){
-          throw new Error(data?.error || `HTTP ${res.status}`);
-        }
-
-        setEmailMsg("Sendt ✅ Tjek din inbox (og spam).", "ok");
-
-        st.done = true;
-        saveState(st);
-        setTimeout(render, 350);
-
-      } catch (e){
-        setEmailMsg("Kunne ikke sende lige nu. Prøv igen om lidt (eller tjek net).", "bad");
-        console.error(e);
-      } finally {
-        $("#btnSendEmail").disabled = false;
-      }
-    }
-
     // events
     $("#btnSubmit").addEventListener("click", advanceByCode);
     $("#codeInput").addEventListener("keydown", (e) => { if(e.key === "Enter") advanceByCode(); });
@@ -747,8 +727,7 @@ else {
     $("#btnHints").addEventListener("click", toggleHints);
     $("#btnReset").addEventListener("click", resetFlow);
 
-    $("#btnSendEmail").addEventListener("click", sendGiftcard);
-    $("#emailInput").addEventListener("keydown", (e) => { if(e.key === "Enter") sendGiftcard(); });
+    $("#btnDownload").addEventListener("click", downloadGiftcard);
 
     render();
   </script>
