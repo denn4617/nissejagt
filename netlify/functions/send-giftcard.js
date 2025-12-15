@@ -74,6 +74,11 @@ export async function handler(event) {
 
     return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, id: data.id }) };
   } catch (err) {
-    return { statusCode: 500, headers: cors, body: JSON.stringify({ error: "Server error" }) };
-  }
+  console.error("send-giftcard failed:", err);
+  return {
+    statusCode: 500,
+    headers: cors,
+    body: JSON.stringify({ error: "Server error", details: String(err?.message || err) }),
+  };
+}
 }
