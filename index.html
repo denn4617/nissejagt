@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Nissejagt</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --card:rgba(255,255,255,.06); --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.70); --line:rgba(255,255,255,.12);
+      --ok:rgba(64,255,172,.95); --bad:rgba(255,90,90,.95);
+      --accent:rgba(255,220,120,.95); --shadow:0 18px 50px rgba(0,0,0,.45);
+      --radius:22px; --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      --sans:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;font-family:var(--sans);
+      background:
+        radial-gradient(900px 600px at 20% 10%, rgba(255,255,255,.09), transparent 45%),
+        radial-gradient(900px 600px at 80% 20%, rgba(255,220,120,.08), transparent 50%),
+        radial-gradient(900px 600px at 50% 90%, rgba(64,255,172,.06), transparent 55%),
+        var(--bg);
+      color:var(--text);
+      display:flex;align-items:center;justify-content:center;
+      padding:28px 14px;overflow-x:hidden;
+    }
+    .wrap{width:min(900px,100%);position:relative}
+    header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .title{display:flex;flex-direction:column;gap:6px}
+    h1{margin:0;font-size:clamp(26px,3.8vw,42px);letter-spacing:-.02em;line-height:1.05}
+    .subtitle{margin:0;color:var(--muted);line-height:1.4;max-width:60ch}
+    .top-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    button,.btn{
+      appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--text);
+      border-radius:999px;padding:10px 14px;font-weight:650;letter-spacing:.01em;cursor:pointer;
+      transition:transform .06s ease, background .16s ease, border-color .16s ease;
+      box-shadow:0 10px 20px rgba(0,0,0,.18);text-decoration:none;
+      display:inline-flex;align-items:center;gap:8px;user-select:none;
+    }
+    button:hover,.btn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2)}
+    button:active,.btn:active{transform:translateY(1px)}
+    .ghost{background:transparent;box-shadow:none}
+    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-top:16px}
+    @media (max-width:860px){.grid{grid-template-columns:1fr}}
+    .card{
+      background:linear-gradient(180deg,var(--card),rgba(255,255,255,.03));
+      border:1px solid var(--line);border-radius:var(--radius);
+      box-shadow:var(--shadow);padding:18px;
+    }
+    .card h2{margin:0 0 8px 0;font-size:20px;letter-spacing:-.01em}
+    .meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;color:var(--muted);font-size:14px}
+    .pill{border:1px solid var(--line);background:rgba(0,0,0,.25);padding:6px 10px;border-radius:999px;font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.85)}
+    .stage{font-size:16px;line-height:1.55;color:rgba(255,255,255,.90);white-space:pre-wrap}
+    .hr{height:1px;background:var(--line);margin:14px 0}
+    .input-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+    input[type="text"],input[type="email"],input[type="password"]{
+      flex:1 1 240px;min-width:220px;border-radius:14px;border:1px solid var(--line);
+      background:rgba(0,0,0,.25);color:var(--text);padding:12px 12px;font-size:15px;outline:none;
+      transition:border-color .16s ease, background .16s ease;font-family:var(--mono);
+    }
+    input:focus{border-color:rgba(255,220,120,.35);background:rgba(0,0,0,.35)}
+    .msg{margin-top:10px;font-size:14px;color:var(--muted);min-height:18px}
+    .msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+    .side h3{margin:0 0 10px 0;font-size:16px;color:rgba(255,255,255,.92)}
+    .list{display:flex;flex-direction:column;gap:10px}
+    .step{
+      border:1px solid var(--line);background:rgba(255,255,255,.04);
+      border-radius:18px;padding:12px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;
+    }
+    .step .left{display:flex;flex-direction:column;gap:4px}
+    .step .name{font-weight:700;letter-spacing:-.01em}
+    .step .desc{font-size:13px;color:var(--muted);line-height:1.35}
+    .tag{
+      font-size:12px;border-radius:999px;padding:6px 10px;border:1px solid var(--line);
+      background:rgba(0,0,0,.25);white-space:nowrap;font-family:var(--mono);
+    }
+    .tag.done{color:var(--ok);border-color:rgba(64,255,172,.35)}
+    .tag.now{color:var(--accent);border-color:rgba(255,220,120,.35)}
+    .tag.locked{color:rgba(255,255,255,.6)}
+    .small{font-size:12px;color:rgba(255,255,255,.62);line-height:1.35}
+    .footer{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;color:rgba(255,255,255,.55);font-size:12px}
+    .kbd{
+      font-family:var(--mono);border:1px solid var(--line);border-bottom-color:rgba(255,255,255,.22);
+      background:rgba(255,255,255,.05);padding:2px 7px;border-radius:9px;
+    }
+
+    /* Hat minigame overlay */
+    .game-wrap{
+      position:relative;min-height:220px;border:1px dashed rgba(255,255,255,.20);
+      border-radius:18px;background:rgba(0,0,0,.18);overflow:hidden;margin-top:10px;
+    }
+    .game-hud{
+      position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;gap:10px;
+      pointer-events:none;font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.8);
+    }
+    .hat{
+      position:absolute;font-size:44px;cursor:pointer;user-select:none;
+      filter:drop-shadow(0 10px 20px rgba(0,0,0,.35));will-change:transform;transform:translate3d(0,0,0);
+      touch-action:manipulation;
+    }
+    .hat:active{transform:scale(0.92)}
+    .hidden{display:none !important}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>🎁 Nissejagt</h1>
+        <p class="subtitle" id="subtitle">Find posten, løs opgaven, og lås næste hint op.</p>
+      </div>
+      <div class="top-actions">
+        <button class="ghost" id="btnHints" title="Vis/Skjul et ekstra hint">💡 Hint</button>
+        <button class="ghost" id="btnReset" title="Nulstil (kræver pin)">♻️ Reset</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <main class="card">
+        <h2 id="stageTitle">Loading…</h2>
+        <div class="meta">
+          <span class="pill" id="progressPill">—</span>
+          <span class="pill" id="statusPill">—</span>
+        </div>
+
+        <div class="stage" id="stageText"></div>
+
+        <div id="gameContainer" class="game-wrap hidden" aria-label="Julemands-spil">
+          <div class="game-hud">
+            <div>🎅 Fang julemænd: <span id="hatCount">0</span>/<span id="hatGoal">5</span></div>
+            <div>⏱️ <span id="hatTime">0.0</span>s</div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div id="codeArea">
+          <div class="input-row">
+            <input id="codeInput" type="text" inputmode="text" autocomplete="off" placeholder="Skriv koden her…" />
+            <button id="btnSubmit">Lås op</button>
+          </div>
+          <div class="msg" id="msg"></div>
+        </div>
+
+        <div id="emailArea" class="hidden">
+          <div class="input-row">
+            <input id="emailInput" type="email" autocomplete="email" placeholder="Skriv din email for at modtage gavekortet…" />
+            <button id="btnSendEmail">Send gavekort</button>
+          </div>
+          <div class="msg" id="emailMsg"></div>
+          <div class="small" style="margin-top:8px;">
+            (Der sendes en mail med gavekortet som vedhæftet fil.)
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="small" id="hintBox" style="display:none;"></div>
+
+        <div class="footer">
+          <div>Progress gemmes automatisk ✅</div>
+        </div>
+      </main>
+
+      <aside class="card side">
+        <h3>Rute</h3>
+        <div class="list" id="routeList"></div>
+        <div class="hr"></div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const HUNT = {
+      titleLine: "Skriv START for at gå i gang. Herefter låser du op med koder fra posterne.",
+      adminResetPin: "420",
+      intro: {
+        title: "Velkommen",
+        text:
+`Hej 🎄
+
+Du har fundet nissejagten.
+
+Regler:
+1) Skriv START for at begynde.
+2) Læs hintet.
+3) Find posten i huset.
+4) Skriv koden fra sedlen for at låse næste niveau op.
+
+Klar?`,
+        hint: "Hvis du sidder fast: brug hint-knappen øverst."
+      },
+      steps: [
+        {
+          id: "fridge_riddle",
+          type: "code",
+          name: "Niveau 1",
+          where: "Gåde",
+          code: "ICE",
+          text:
+`NIVEAU 1 — GÅDE
+
+Jeg er kold uden at være ond.
+Jeg åbnes mange gange om dagen.
+Jeg gemmer på drikke og rester,
+og jeg summer ofte lidt i baggrunden.
+
+Hvor skal du hen? Find posten + koden.`,
+          hint: "Koden finder du på noget ice-koldt 🥶"
+        },
+        {
+          id: "hats_game",
+          type: "game",
+          name: "Niveau 2",
+          where: "Mini-game",
+          hatsToCatch: 5,
+          text:
+`NIVEAU 2 — FANG JULEMÆND
+
+Fang 5 julemænd, der svæver rundt på skærmen.
+Når du har fanget alle, får du næste destination.`,
+          afterGameText:
+`YES! ✅
+
+Næste: Find en pæn sten på terrassetrapperne.
+Der står en kode på/ved stenen.
+
+Når du har koden, skriv den her.`,
+          code: "STEN",
+          hint: "Tryk/tap på julemænd. De flytter sig, så vær hurtig."
+        },
+        {
+          id: "yarn_riddle",
+          type: "code",
+          name: "Niveau 3",
+          where: "Gåde",
+          code: "GOLDIE",
+          text:
+`NIVEAU 3 — GÅDE
+
+Jeg kan blive til sløjfer, tæpper og små figurer.
+Jeg bliver til, mens hænderne arbejder i rytme,
+og jeg bor ofte i en kurv med mine venner.
+
+Hvor skal du hen? Find koden ved posten.`,
+          hint: "Tjek garnruller 🧶"
+        },
+        {
+          id: "final_task",
+          type: "finalTask",
+          name: "Finale",
+          where: "Opgave",
+          text:
+`FINALE — SIDSTE OPGAVE
+
+Okay, sidste check.
+
+Skriv svaret på denne lille gåde:
+
+Jeg er et rum, hvor man ofte vasker hænder,
+og hvor man (måske) også ser sig i spejlet.
+Jeg har en vask – og under den gemmer sig ting...
+
+Hvad er rummet?`,
+          answer: "BADEVÆRELSE",
+          // når hun svarer rigtigt, går vi videre til næste step; derfor lægger vi instruktionen her:
+          hint: "Det starter med B…"
+        },
+        {
+          id: "final_unlock",
+          type: "emailUnlock",
+          name: "Gavekort",
+          where: "Præmie",
+          code: "SMILLZ",
+          text:
+`NÆSTE: GÅ TIL BADEVÆRELSET ✅
+
+Kig UNDER VASKEN PÅ TOILETTET.
+
+Der ligger:
+- Smirnoff Ice 🍻
+- og en KODE
+
+Skriv koden her for at låse email-feltet op.`,
+  unlockedText:
+`YES! ✅
+
+Indtast din email adresse for at modtage din sidste gave 🎁`,
+  hint: "Koden står på sedlen ved isen."
+}
+      ],
+      end: {
+        title: "Du klarede den! 🎉",
+        text:
+`Tillykke!
+
+Du har gennemført nissejagten.
+Og ja… du har nu et mindre Smirnoff Ice-projekt foran dig 🍻😄
+
+Glædelig jul!`
+      }
+    };
+
+    const $ = (s) => document.querySelector(s);
+    const storageKey = "nissejagt_progress_v3";
+    const norm = (s) => (s || "").toString().trim().toLowerCase().replace(/\s+/g, "");
+
+    function loadState(){
+      try{
+        const raw = localStorage.getItem(storageKey);
+        if(!raw) return { idx:-1, done:false, revealedHint:false, gameUnlocked:false, hatsCaught:0, emailUnlocked:false };
+        const st = JSON.parse(raw);
+        return {
+          idx: typeof st.idx === "number" ? st.idx : -1,
+          done: !!st.done,
+          revealedHint: !!st.revealedHint,
+          gameUnlocked: !!st.gameUnlocked,
+          hatsCaught: typeof st.hatsCaught === "number" ? st.hatsCaught : 0,
+          emailUnlocked: !!st.emailUnlocked
+        };
+      } catch {
+        return { idx:-1, done:false, revealedHint:false, gameUnlocked:false, hatsCaught:0, emailUnlocked:false };
+      }
+    }
+    function saveState(st){ localStorage.setItem(storageKey, JSON.stringify(st)); }
+
+    function stageFromState(st){
+      if(st.done) return { kind:"end" };
+      if(st.idx < 0) return { kind:"intro" };
+      if(st.idx >= HUNT.steps.length) return { kind:"end" };
+      return { kind:"step", step: HUNT.steps[st.idx] };
+    }
+
+    function setMsg(text, kind){
+      const el = $("#msg");
+      el.textContent = text;
+      el.className = "msg " + (kind || "");
+    }
+    function setEmailMsg(text, kind){
+      const el = $("#emailMsg");
+      el.textContent = text;
+      el.className = "msg " + (kind || "");
+    }
+
+    function render(){
+      const st = loadState();
+      const stage = stageFromState(st);
+
+      $("#subtitle").textContent = HUNT.titleLine;
+
+      const total = HUNT.steps.length;
+      $("#progressPill").textContent = st.done ? "Færdig" : `Progress: ${Math.max(st.idx,0)}/${total}`;
+      $("#statusPill").textContent =
+        stage.kind === "intro" ? "Start" :
+        stage.kind === "end" ? "Afsluttet" :
+        `Aktiv: ${stage.step.name}`;
+
+      let title="", text="", hint="";
+
+      $("#gameContainer").classList.add("hidden");
+      $("#emailArea").classList.add("hidden");
+      $("#codeArea").classList.remove("hidden");
+
+      if(stage.kind === "intro"){
+        title = HUNT.intro.title;
+        text  = HUNT.intro.text;
+        hint  = HUNT.intro.hint || "";
+        $("#codeInput").placeholder = "Skriv START…";
+        $("#codeInput").disabled = false;
+        $("#btnSubmit").disabled = false;
+      } else if(stage.kind === "end"){
+        title = HUNT.end.title;
+        text  = HUNT.end.text;
+        hint  = "";
+        $("#codeInput").disabled = true;
+        $("#btnSubmit").disabled = true;
+        $("#codeInput").placeholder = "Færdig 🎉";
+      } else {
+        title = `${stage.step.name} · ${stage.step.where}`;
+        text  = stage.step.text;
+        hint  = stage.step.hint || "";
+
+        if(stage.step.type === "game"){
+          $("#gameContainer").classList.remove("hidden");
+          $("#codeInput").placeholder = "Skriv koden fra stenen…";
+          if(!st.gameUnlocked){
+            $("#codeInput").disabled = true;
+            $("#btnSubmit").disabled = true;
+          } else {
+            $("#codeInput").disabled = false;
+            $("#btnSubmit").disabled = false;
+          }
+        } else if(stage.step.type === "finalTask"){
+          $("#codeInput").disabled = false;
+          $("#btnSubmit").disabled = false;
+          $("#codeInput").placeholder = "Skriv svaret her…";
+        } else if(stage.step.type === "emailUnlock"){
+  $("#codeInput").disabled = false;
+  $("#btnSubmit").disabled = false;
+
+  if(st.emailUnlocked){
+    // VIGTIGT: sæt variablen 'text' (så den ikke overskrives senere)
+    text = stage.step.unlockedText || "Indtast din email adresse for at modtage din sidste gave 🎁";
+
+    $("#codeArea").classList.add("hidden");
+    $("#emailArea").classList.remove("hidden");
+  } else {
+    $("#codeInput").placeholder = "Skriv koden fra sedlen under vasken…";
+  }
+}
+else {
+          $("#codeInput").disabled = false;
+          $("#btnSubmit").disabled = false;
+          $("#codeInput").placeholder = "Skriv koden fra sedlen…";
+        }
+      }
+
+      $("#stageTitle").textContent = title;
+      $("#stageText").textContent = text;
+
+      const showHint = st.revealedHint && hint;
+      $("#hintBox").style.display = showHint ? "block" : "none";
+      $("#hintBox").textContent = showHint ? `Ekstra hint: ${hint}` : "";
+
+      $("#msg").textContent = "";
+      $("#msg").className = "msg";
+      $("#emailMsg").textContent = "";
+      $("#emailMsg").className = "msg";
+
+      // route list
+      const list = $("#routeList");
+      list.innerHTML = "";
+      HUNT.steps.forEach((s, i) => {
+        const div = document.createElement("div");
+        div.className = "step";
+
+        const left = document.createElement("div");
+        left.className = "left";
+
+        const nm = document.createElement("div");
+        nm.className = "name";
+        nm.textContent = `${s.name}: ${s.where}`;
+
+        const ds = document.createElement("div");
+        ds.className = "desc";
+        ds.textContent =
+          (s.type === "emailUnlock") ? "Følg instruktionen på siden" :
+          "Følg instruktionen på siden";
+
+        left.appendChild(nm);
+        left.appendChild(ds);
+
+        const tag = document.createElement("div");
+        tag.className = "tag";
+        if(st.done || i < st.idx) { tag.textContent = "DONE"; tag.classList.add("done"); }
+        else if(i === st.idx) { tag.textContent = "NU"; tag.classList.add("now"); }
+        else { tag.textContent = "LÅST"; tag.classList.add("locked"); }
+
+        div.appendChild(left);
+        div.appendChild(tag);
+        list.appendChild(div);
+      });
+
+      $("#codeInput").value = "";
+      $("#emailInput").value = "";
+
+      if(stage.kind === "step" && stage.step.type === "game"){
+        initHatGame();
+      }
+    }
+
+    function advanceByCode(){
+      const st = loadState();
+      const stage = stageFromState(st);
+      const input = norm($("#codeInput").value);
+
+      if(stage.kind === "end") return;
+
+      if(stage.kind === "intro"){
+        if(input === "start"){
+          st.idx = 0;
+          st.revealedHint = false;
+          st.gameUnlocked = false;
+          st.hatsCaught = 0;
+          st.emailUnlocked = false;
+          saveState(st);
+          setMsg("Nice 😄 Niveau 1 er klar!", "ok");
+          setTimeout(render, 250);
+        } else {
+          setMsg("Skriv START for at begynde.", "bad");
+        }
+        return;
+      }
+
+      if(stage.kind !== "step") return;
+      const step = stage.step;
+
+      if(step.type === "game" && !st.gameUnlocked){
+        setMsg("Du skal lige fange julemændene først 😈", "bad");
+        return;
+      }
+
+      if(step.type === "finalTask"){
+        const expectedAnswer = norm(step.answer || "");
+        if(input && expectedAnswer && input === expectedAnswer){
+          setMsg("Korrekt ✅ Gå til badeværelset!", "ok");
+          st.idx += 1;               // videre til emailUnlock
+          st.revealedHint = false;
+          st.gameUnlocked = false;
+          st.hatsCaught = 0;
+          st.emailUnlocked = false;
+          saveState(st);
+          setTimeout(render, 280);
+        } else {
+          setMsg("Ikke helt… prøv igen 👀", "bad");
+        }
+        return;
+      }
+
+      if(step.type === "emailUnlock"){
+        const expectedCode = norm(step.code || "");
+        if(input && expectedCode && input === expectedCode){
+          st.emailUnlocked = true;
+          saveState(st);
+          setMsg("Korrekt ✅ Email-feltet er nu låst op.", "ok");
+          setTimeout(render, 200);
+        } else {
+          setMsg("Forkert kode – kig på sedlen under vasken 😉", "bad");
+        }
+        return;
+      }
+
+      const expected = norm(step.code || "");
+      if(input && expected && input === expected){
+        st.idx += 1;
+        st.revealedHint = false;
+        st.gameUnlocked = false;
+        st.hatsCaught = 0;
+        st.emailUnlocked = false;
+        saveState(st);
+        setMsg("Korrekt ✅ Næste niveau!", "ok");
+        setTimeout(render, 280);
+      } else {
+        setMsg("Hmm… den kode er ikke helt rigtig. Prøv igen 👀", "bad");
+      }
+    }
+
+    function toggleHints(){
+      const st = loadState();
+      st.revealedHint = !st.revealedHint;
+      saveState(st);
+      render();
+    }
+
+    async function copyLink(){
+      try{
+        await navigator.clipboard.writeText(location.href);
+        setMsg("Link kopieret ✅", "ok");
+      } catch {
+        setMsg("Kunne ikke kopiere automatisk. Kopiér URL’en i adresselinjen.", "bad");
+      }
+    }
+
+    function resetFlow(){
+      const pin = prompt("Admin pin for reset:");
+      if(pin === null) return;
+      if(norm(pin) !== norm(HUNT.adminResetPin)){
+        setMsg("Forkert pin.", "bad");
+        return;
+      }
+      localStorage.removeItem(storageKey);
+      setMsg("Reset gennemført. Starter forfra.", "ok");
+      setTimeout(render, 250);
+    }
+
+    // ===== Hat game =====
+    let game = null;
+
+    function initHatGame(){
+      if(game && game.running) return;
+
+      const st = loadState();
+      const stage = stageFromState(st);
+      if(stage.kind !== "step" || stage.step.type !== "game") return;
+
+      const container = $("#gameContainer");
+      const goal = stage.step.hatsToCatch || 5;
+
+      [...container.querySelectorAll(".hat")].forEach(n => n.remove());
+
+      $("#hatGoal").textContent = String(goal);
+      $("#hatCount").textContent = "0";
+      $("#hatTime").textContent = "0.0";
+
+      const bounds = () => container.getBoundingClientRect();
+      const rand = (min,max) => Math.random()*(max-min)+min;
+
+      let caught = 0;
+      let startTs = performance.now();
+
+      game = { running:true, raf:null, hats:[] };
+
+      function spawnHat(){
+        const b = bounds();
+        const hat = document.createElement("div");
+        hat.className = "hat";
+        hat.textContent = "🎅";
+
+        const x = rand(10, Math.max(10, b.width - 60));
+        const y = rand(40, Math.max(60, b.height - 70));
+        hat.style.left = x + "px";
+        hat.style.top  = y + "px";
+
+        const vx = rand(-90, 90);
+        const vy = rand(-70, 70);
+
+        const state = { el: hat, x, y, vx, vy };
+        hat.addEventListener("click", () => catchHat(state));
+        hat.addEventListener("touchstart", (e) => { e.preventDefault(); catchHat(state); }, { passive:false });
+
+        container.appendChild(hat);
+        game.hats.push(state);
+      }
+
+      function catchHat(h){
+        if(!game.running) return;
+        h.el.remove();
+        game.hats = game.hats.filter(x => x !== h);
+        caught += 1;
+        $("#hatCount").textContent = String(caught);
+
+        if(caught >= goal){
+          winGame();
+        } else {
+          spawnHat();
+        }
+      }
+
+      function winGame(){
+        game.running = false;
+        cancelAnimationFrame(game.raf);
+
+        const st2 = loadState();
+        st2.gameUnlocked = true;
+        saveState(st2);
+
+        const current = stageFromState(st2);
+        if(current.kind === "step" && current.step.type === "game"){
+          $("#stageText").textContent = current.step.afterGameText || "Klaret!";
+          $("#codeInput").disabled = false;
+          $("#btnSubmit").disabled = false;
+          $("#codeInput").focus({ preventScroll:true });
+          setMsg("Mini-game klaret ✅ Find stenen og skriv koden.", "ok");
+        }
+      }
+
+      spawnHat();
+      spawnHat();
+
+      function tick(ts){
+        if(!game.running) return;
+
+        const b = bounds();
+        const dt = (ts - (tick.prevTs ?? ts)) / 1000;
+        tick.prevTs = ts;
+
+        const t = (ts - startTs)/1000;
+        $("#hatTime").textContent = t.toFixed(1);
+
+        for(const h of game.hats){
+          h.x += h.vx * dt;
+          h.y += h.vy * dt;
+
+          const maxX = Math.max(10, b.width - 60);
+          const maxY = Math.max(40, b.height - 70);
+
+          if(h.x <= 10){ h.x = 10; h.vx *= -1; }
+          if(h.x >= maxX){ h.x = maxX; h.vx *= -1; }
+          if(h.y <= 40){ h.y = 40; h.vy *= -1; }
+          if(h.y >= maxY){ h.y = maxY; h.vy *= -1; }
+
+          h.vx += (Math.random() - 0.5) * 8 * dt;
+          h.vy += (Math.random() - 0.5) * 8 * dt;
+
+          h.el.style.left = h.x + "px";
+          h.el.style.top  = h.y + "px";
+        }
+
+        game.raf = requestAnimationFrame(tick);
+      }
+      game.raf = requestAnimationFrame(tick);
+    }
+
+    // ===== Email send =====
+    function validEmail(s){
+      const v = (s || "").trim();
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    }
+
+    async function sendGiftcard(){
+      const st = loadState();
+      const stage = stageFromState(st);
+      if(stage.kind !== "step" || stage.step.type !== "emailUnlock") return;
+      if(!st.emailUnlocked) return;
+
+      const email = ($("#emailInput").value || "").trim();
+      if(!validEmail(email)){
+        setEmailMsg("Skriv en gyldig emailadresse.", "bad");
+        return;
+      }
+
+      $("#btnSendEmail").disabled = true;
+      setEmailMsg("Sender…", "");
+
+      try{
+        const res = await fetch("/.netlify/functions/send-giftcard", {
+          method: "POST",
+          headers: { "Content-Type":"application/json" },
+          body: JSON.stringify({ email })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if(!res.ok){
+          throw new Error(data?.error || `HTTP ${res.status}`);
+        }
+
+        setEmailMsg("Sendt ✅ Tjek din inbox (og spam).", "ok");
+
+        st.done = true;
+        saveState(st);
+        setTimeout(render, 350);
+
+      } catch (e){
+        setEmailMsg("Kunne ikke sende lige nu. Prøv igen om lidt (eller tjek net).", "bad");
+        console.error(e);
+      } finally {
+        $("#btnSendEmail").disabled = false;
+      }
+    }
+
+    // events
+    $("#btnSubmit").addEventListener("click", advanceByCode);
+    $("#codeInput").addEventListener("keydown", (e) => { if(e.key === "Enter") advanceByCode(); });
+
+    $("#btnHints").addEventListener("click", toggleHints);
+    $("#btnReset").addEventListener("click", resetFlow);
+
+    $("#btnSendEmail").addEventListener("click", sendGiftcard);
+    $("#emailInput").addEventListener("keydown", (e) => { if(e.key === "Enter") sendGiftcard(); });
+
+    render();
+  </script>
+</body>
+</html>
